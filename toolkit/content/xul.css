@@ -732,7 +732,7 @@ tab {
   -moz-box-pack: center;
 }
 
-tab[selected="true"]:not([ignorefocus="true"]) {
+tab[visually-selected="true"]:not([ignorefocus="true"]) {
   -moz-user-focus: normal;
 }
 

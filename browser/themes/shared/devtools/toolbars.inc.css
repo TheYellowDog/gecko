@@ -479,22 +479,22 @@
   border-image: @smallSeparatorDark@ 1 1;
 }
 
-.theme-dark .devtools-sidebar-tabs tabs > tab[selected] + tab {
+.theme-dark .devtools-sidebar-tabs tabs > tab[visually-selected] + tab {
   border-image: @solidSeparatorDark@ 1 1;
 }
 
-.theme-dark .devtools-sidebar-tabs tabs > tab[selected] + tab:hover {
+.theme-dark .devtools-sidebar-tabs tabs > tab[visually-selected] + tab:hover {
   background: hsla(206,37%,4%,.2);
   border-image: @solidSeparatorDark@ 1 1;
 }
 
-.theme-dark .devtools-sidebar-tabs tabs > tab[selected] + tab:hover:active {
+.theme-dark .devtools-sidebar-tabs tabs > tab[visually-selected] + tab:hover:active {
   background: hsla(206,37%,4%,.4);
   border-image: @solidSeparatorDark@ 1 1;
 }
 
-.theme-dark .devtools-sidebar-tabs tabs > tab[selected],
-.theme-dark .devtools-sidebar-tabs tabs > tab[selected]:hover:active {
+.theme-dark .devtools-sidebar-tabs tabs > tab[visually-selected],
+.theme-dark .devtools-sidebar-tabs tabs > tab[visually-selected]:hover:active {
   color: var(--theme-selection-color);
   background: #1d4f73;
   border-image: @solidSeparatorDark@ 1 1;
@@ -514,17 +514,17 @@
   border-image: @smallSeparatorLight@ 1 1;
 }
 
-.theme-light .devtools-sidebar-tabs tabs > tab[selected] + tab {
+.theme-light .devtools-sidebar-tabs tabs > tab[visually-selected] + tab {
   border-image: @solidSeparatorLight@;
 }
 
-.theme-light .devtools-sidebar-tabs tabs > tab[selected] + tab:hover {
+.theme-light .devtools-sidebar-tabs tabs > tab[visually-selected] + tab:hover {
   background: #ddd;
   border-image: @solidSeparatorLight@;
 }
 
-.theme-light .devtools-sidebar-tabs tabs > tab[selected],
-.theme-light .devtools-sidebar-tabs tabs > tab[selected]:hover:active {
+.theme-light .devtools-sidebar-tabs tabs > tab[visually-selected],
+.theme-light .devtools-sidebar-tabs tabs > tab[visually-selected]:hover:active {
   color: var(--theme-selection-color);
   background: #4c9ed9;
   border-image: @solidSeparatorLight@;
@@ -783,12 +783,12 @@
   background-color: rgba(170,170,170,.4);
 }
 
-.theme-dark .devtools-tab:not([selected])[highlighted] {
+.theme-dark .devtools-tab:not([visually-selected])[highlighted] {
   background-color: hsla(99,100%,14%,.2);
   box-shadow: 0 2px 0 #7bc107 inset;
 }
 
-.theme-light .devtools-tab:not([selected])[highlighted] {
+.theme-light .devtools-tab:not([visually-selected])[highlighted] {
   background-color: rgba(44, 187, 15, .2);
 }
 
@@ -810,46 +810,46 @@
 }
 
 .devtools-tab:active > image,
-.devtools-tab[selected] > image {
+.devtools-tab[visually-selected] > image {
   opacity: 1;
 }
 
-.devtools-tabbar .devtools-tab[selected],
-.devtools-tabbar .devtools-tab[selected]:hover:active {
+.devtools-tabbar .devtools-tab[visually-selected],
+.devtools-tabbar .devtools-tab[visually-selected]:hover:active {
   color: var(--theme-selection-color);
   background-color: var(--theme-selection-background);
 }
 
-.theme-dark .devtools-tabbar .devtools-tab[selected] {
+.theme-dark .devtools-tabbar .devtools-tab[visually-selected] {
   box-shadow: 0 2px 0 #d7f1ff inset,
               0 8px 3px -5px #2b82bf inset,
               0 -2px 0 rgba(0,0,0,.2) inset;
 }
 
-.theme-light .devtools-tabbar .devtools-tab[selected] {
+.theme-light .devtools-tabbar .devtools-tab[visually-selected] {
   box-shadow: 0 2px 0 #d7f1ff inset,
               0 8px 3px -5px #2b82bf inset,
               0 -2px 0 rgba(0,0,0,.06) inset;
 }
 
-#toolbox-tabs .devtools-tab[selected],
+#toolbox-tabs .devtools-tab[visually-selected],
 #toolbox-tabs .devtools-tab[highlighted] {
   border-width: 0;
   -moz-padding-start: 1px;
 }
 
-#toolbox-tabs .devtools-tab[selected]:last-child,
+#toolbox-tabs .devtools-tab[visually-selected]:last-child,
 #toolbox-tabs .devtools-tab[highlighted]:last-child {
   -moz-padding-end: 1px;
 }
 
-#toolbox-tabs .devtools-tab[selected] + .devtools-tab,
+#toolbox-tabs .devtools-tab[visually-selected] + .devtools-tab,
 #toolbox-tabs .devtools-tab[highlighted] + .devtools-tab {
   -moz-border-start-width: 0;
   -moz-padding-start: 1px;
 }
 
-#toolbox-tabs .devtools-tab:first-child[selected] {
+#toolbox-tabs .devtools-tab:first-child[visually-selected] {
   -moz-border-start-width: 0;
 }
 
@@ -858,14 +858,14 @@
 }
 
 .devtools-tab:not([highlighted]) > .highlighted-icon,
-.devtools-tab[selected] > .highlighted-icon,
-.devtools-tab:not([selected])[highlighted] > .default-icon {
+.devtools-tab[visually-selected] > .highlighted-icon,
+.devtools-tab:not([visually-selected])[highlighted] > .default-icon {
   visibility: collapse;
 }
 
 /* The options tab is special - it doesn't have the same parent
    as the other tabs (toolbox-option-container vs toolbox-tabs) */
-#toolbox-option-container .devtools-tab:not([selected]) {
+#toolbox-option-container .devtools-tab:not([visually-selected]) {
   background-color: transparent;
 }
 #toolbox-option-container .devtools-tab {
@@ -902,7 +902,7 @@
 /* Since selected backgrounds are blue, we want to use the normal
  * (light) icons. */
 .theme-light .command-button-invertable[checked=true]:not(:active) > image,
-.theme-light .devtools-tab[icon-invertable][selected] > image,
+.theme-light .devtools-tab[icon-invertable][visually-selected] > image,
 .theme-light .devtools-tab[icon-invertable][highlighted] > image,
 .theme-light #record-snapshot[checked] > image,
 .theme-light #profiler-start[checked] > image,
