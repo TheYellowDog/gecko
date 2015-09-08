@@ -901,6 +901,26 @@ function WebContentConverterRegistrarContent() {
 }
 
 WebContentConverterRegistrarContent.prototype = {
+
+  /**
+   * See nsIWebContentConverterService
+   */
+  getContentHandlers(contentType, countRef) {
+    // CONTENT PROCESS STUB
+  },
+
+  setAutoHandler(aContentType, aHandler) {
+    let cpmm = Cc["@mozilla.org/childprocessmessagemanager;1"].
+                 getService(Ci.nsIMessageSender);
+    cpmm.sendAsyncMessage("WCCR:setAutoHandler",
+                          { contentType: aContentType,
+                            handler: aHandler });
+  },
+
+  getWebContentHandlerByURI(contentType, uri) {
+    // CONTENT PROCESS STUB
+  },
+
   /**
    * See nsIWebContentHandlerRegistrar
    */
@@ -958,6 +978,7 @@ WebContentConverterRegistrarContent.prototype = {
    */
   QueryInterface: XPCOMUtils.generateQI(
                      [Ci.nsIWebContentHandlerRegistrar,
+                      Ci.nsIWebContentConverterService,
                       Ci.nsIFactory])
 };
 

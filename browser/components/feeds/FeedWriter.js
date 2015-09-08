@@ -243,15 +243,8 @@ FeedWriter.prototype = {
 
   /* Magic helper methods to be used instead of xbl properties */
   _getSelectedItemFromMenulist: function FW__getSelectedItemFromList(aList) {
-    var node = aList.firstChild.firstChild;
-    while (node) {
-      if (node.localName == "menuitem" && node.getAttribute("selected") == "true")
-        return node;
-
-      node = node.nextSibling;
-    }
-
-    return null;
+    var options = aList.options;
+    return options[aList.selectedIndex];
   },
 
   _setCheckboxCheckedState: function FW__setCheckboxCheckedState(aCheckbox, aValue) {
@@ -644,19 +637,7 @@ FeedWriter.prototype = {
    *          The menuitem's associated file
    */
   _initMenuItemWithFile: function(aMenuItem, aFile) {
-    var label = this._getFileDisplayName(aFile);
-    var image = this._getFileIconURL(aFile);
-    aMenuitem.setAttribute('label', label);
-    aMenuitem.setAttribute('image', image);
-  },
-
-  /**
-   * Helper method to get an element in the XBL binding where the handler
-   * selection UI lives
-   */
-  _getUIElement: function FW__getUIElement(id) {
-    return this._document.getAnonymousElementByAttribute(
-      this._document.getElementById("feedSubscribeLine"), "anonid", id);
+    aMenuItem.textContent = this._getFileDisplayName(aFile);
   },
 
   /**
@@ -688,7 +669,7 @@ FeedWriter.prototype = {
 
               // Show and select the selected application menuitem
               this._selectedAppMenuItem.hidden = false;
-              this._selectedAppMenuItem.doCommand();
+              this._selectedAppMenuItem.selected = true;
               if (aCallback) {
                 aCallback(true);
                 return;
@@ -710,7 +691,7 @@ FeedWriter.prototype = {
   },
 
   _setAlwaysUseCheckedState: function FW__setAlwaysUseCheckedState(feedType) {
-    var checkbox = this._getUIElement("alwaysUse");
+    var checkbox = this._document.getElementById("alwaysUse");
     if (checkbox) {
       var alwaysUse = false;
       try {
@@ -734,17 +715,16 @@ FeedWriter.prototype = {
         break;
     }
 
-    var subscribeUsing = this._getUIElement("subscribeUsingDescription");
-    var label = this._getString(stringLabel);
-    subscribeUsing.setAttribute('value', label);
+    var subscribeUsing = this._document.getElementById("subscribeUsingDescription");
+    subscribeUsing.textContent = this._getString(stringLabel);
   },
 
   _setAlwaysUseLabel: function FW__setAlwaysUseLabel() {
-    var checkbox = this._getUIElement("alwaysUse");
+    var checkbox = this._document.getElementById("alwaysUse");
     if (checkbox) {
       if (this._handlersMenuList) {
         var handlerName = this._getSelectedItemFromMenulist(this._handlersMenuList)
-                              .getAttribute("label");
+                              .textContent;
         var stringLabel = "alwaysUseForFeeds";
         switch (this._getFeedType()) {
           case Ci.nsIFeed.TYPE_VIDEO:
@@ -758,7 +738,8 @@ FeedWriter.prototype = {
 
         var label = this._getFormattedString(stringLabel, [handlerName]);
 
-        checkbox.setAttribute('label', label);
+        var checkboxText = this._document.getElementById("checkboxText");
+        checkboxText.textContent = label;
       }
     }
   },
@@ -770,30 +751,20 @@ FeedWriter.prototype = {
       return;
     }
 
-    if (event.type == "command") {
-      switch (event.target.getAttribute("anonid")) {
-        case "subscribeButton":
+    if (event.type == "click") {
+      if (event.target.id == "subscribeButton") {
           this.subscribe();
-          break;
+      }
+    } else if (event.type = "change") {
+      switch (this._getSelectedItemFromMenulist(event.target).id) {
         case "chooseApplicationMenuItem":
-          /* Bug 351263: Make sure to not steal focus if the "Choose
-           * Application" item is being selected with the keyboard. We do this
-           * by ignoring command events while the dropdown is closed (user
-           * arrowing through the combobox), but handling them while the
-           * combobox dropdown is open (user pressed enter when an item was
-           * selected). If we don't show the filepicker here, it will be shown
-           * when clicking "Subscribe Now".
-           */
-          var popupbox = this._handlersMenuList.firstChild.boxObject;
-          if (popupbox.popupState == "hiding") {
-            this._chooseClientApp(function(aResult) {
-              if (!aResult) {
-                // Select the (per-prefs) selected handler if no application
-                // was selected
-                this._setSelectedHandler(this._getFeedType());
-              }
-            }.bind(this));
-          }
+          this._chooseClientApp((aResult) => {
+            if (!aResult) {
+              // Select the (per-prefs) selected handler if no application
+              // was selected
+              this._setSelectedHandler(this._getFeedType());
+            }
+          });
           break;
         default:
           this._setAlwaysUseLabel();
@@ -826,7 +797,7 @@ FeedWriter.prototype = {
             return;
           }
 
-          handlers[0].doCommand();
+          handlers[0].selected = true;
         }
         break;
       }
@@ -843,7 +814,7 @@ FeedWriter.prototype = {
           this._initMenuItemWithFile(this._selectedAppMenuItem,
                                      this._selectedApp);
           this._selectedAppMenuItem.hidden = false;
-          this._selectedAppMenuItem.doCommand();
+          this._selectedAppMenuItem.selected = true;
 
           // Only show the default reader menuitem if the default reader
           // isn't the selected application
@@ -857,15 +828,15 @@ FeedWriter.prototype = {
       }
       case "bookmarks":
       default: {
-        var liveBookmarksMenuItem = this._getUIElement("liveBookmarksMenuItem");
+        var liveBookmarksMenuItem = this._document.getElementById("liveBookmarksMenuItem");
         if (liveBookmarksMenuItem)
-          liveBookmarksMenuItem.doCommand();
+          liveBookmarksMenuItem.selected = true;
       } 
     }
   },
 
   _initSubscriptionUI: function FW__initSubscriptionUI() {
-    var handlersMenuPopup = this._getUIElement("handlersMenuPopup");
+    let handlersMenuPopup = this._document.getElementById("handlersMenuList");
     if (!handlersMenuPopup)
       return;
 
@@ -886,13 +857,11 @@ FeedWriter.prototype = {
         header.className = 'feedBackground';
     }
 
-    var liveBookmarksMenuItem = this._getUIElement("liveBookmarksMenuItem");
+    let liveBookmarksMenuItem = this._document.getElementById("liveBookmarksMenuItem");
 
     // Last-selected application
     var menuItem = liveBookmarksMenuItem.cloneNode(false);
     menuItem.removeAttribute("selected");
-    menuItem.setAttribute("anonid", "selectedAppMenuItem");
-    menuItem.className = "menuitem-iconic selectedAppMenuItem";
     menuItem.setAttribute("handlerType", "client");
     try {
       this._selectedApp = Services.prefs.getComplexValue(getPrefAppForType(feedType),
@@ -920,8 +889,7 @@ FeedWriter.prototype = {
                                   defaultFeedReader;
       menuItem = liveBookmarksMenuItem.cloneNode(false);
       menuItem.removeAttribute("selected");
-      menuItem.setAttribute("anonid", "defaultHandlerMenuItem");
-      menuItem.className = "menuitem-iconic defaultHandlerMenuItem";
+      menuItem.setAttribute("id", "defaultHandlerMenuItem");
       menuItem.setAttribute("handlerType", "client");
 
       this._initMenuItemWithFile(menuItem, this._defaultSystemReader);
@@ -942,9 +910,8 @@ FeedWriter.prototype = {
     // "Choose Application..." menuitem
     menuItem = liveBookmarksMenuItem.cloneNode(false);
     menuItem.removeAttribute("selected");
-    menuItem.setAttribute("anonid", "chooseApplicationMenuItem");
-    menuItem.className = "menuitem-iconic chooseApplicationMenuItem";
-    menuItem.setAttribute("label", this._getString("chooseApplicationMenuItem"));
+    menuItem.setAttribute("id", "chooseApplicationMenuItem");
+    menuItem.textContent = this._getString("chooseApplicationMenuItem");
 
     handlersMenuPopup.appendChild(menuItem);
 
@@ -989,11 +956,11 @@ FeedWriter.prototype = {
 
     // We update the "Always use.." checkbox label whenever the selected item
     // in the list is changed
-    handlersMenuPopup.addEventListener("command", this, false);
+    handlersMenuPopup.addEventListener("change", this, false);
 
     // Set up the "Subscribe Now" button
-    this._getUIElement("subscribeButton")
-        .addEventListener("command", this, false);
+    this._document.getElementById("subscribeButton")
+        .addEventListener("click", this, false);
 
     // first-run ui
     var showFirstRunUI = true;
@@ -1078,7 +1045,7 @@ FeedWriter.prototype = {
     this._window = window;
     this._document = window.document;
     this._document.getElementById("feedSubscribeLine").offsetTop;
-    this._handlersMenuList = this._getUIElement("handlersMenuList");
+    this._handlersMenuList = this._document.getElementById("handlersMenuList");
 
     var secman = Cc["@mozilla.org/scriptsecuritymanager;1"].
                  getService(Ci.nsIScriptSecurityManager);
@@ -1124,10 +1091,10 @@ FeedWriter.prototype = {
   },
 
   close: function FW_close() {
-    this._getUIElement("handlersMenuPopup")
-        .removeEventListener("command", this, false);
-    this._getUIElement("subscribeButton")
-        .removeEventListener("command", this, false);
+    this._document.getElementById("subscribeButton")
+        .removeEventListener("click", this, false);
+    this._document.getElementById("handlersMenuList")
+        .removeEventListener("change", this, false);
     this._document = null;
     this._window = null;
     let prefs = Services.prefs;
@@ -1164,19 +1131,26 @@ FeedWriter.prototype = {
     }
   },
 
+  setFeedCharPref: function FW_setFeedCharPref(aPrefName, aPrefValue) {
+      this._mm.sendAsyncMessage("FeedWriter:SetFeedCharPref",
+                                { pref: aPrefName,
+                                  value: aPrefValue });
+  },
+
   subscribe: function FW_subscribe() {
     var feedType = this._getFeedType();
 
     // Subscribe to the feed using the selected handler and save prefs
     var prefs = Services.prefs;
     var defaultHandler = "reader";
-    var useAsDefault = this._getUIElement("alwaysUse").getAttribute("checked");
+    var useAsDefault = this._document.getElementById("alwaysUse").getAttribute("checked");
 
-    var selectedItem = this._getSelectedItemFromMenulist(this._handlersMenuList);
+    var menuList = this._document.getElementById("handlersMenuList");
+    var selectedItem = this._getSelectedItemFromMenulist(menuList);
     let subscribeCallback = function() {
       if (selectedItem.hasAttribute("webhandlerurl")) {
         var webURI = selectedItem.getAttribute("webhandlerurl");
-        prefs.setCharPref(getPrefReaderForType(feedType), "web");
+        this.setFeedCharPref(getPrefReaderForType(feedType), "web");
 
         var supportsString = Cc["@mozilla.org/supports-string;1"].
                              createInstance(Ci.nsISupportsString);
@@ -1195,20 +1169,20 @@ FeedWriter.prototype = {
           this._window.location.href = handler.getHandlerURI(this._window.location.href);
         }
       } else {
-        switch (selectedItem.getAttribute("anonid")) {
+        switch (selectedItem.id) {
           case "selectedAppMenuItem":
             prefs.setComplexValue(getPrefAppForType(feedType), Ci.nsILocalFile, 
                                   this._selectedApp);
-            prefs.setCharPref(getPrefReaderForType(feedType), "client");
+            this.setFeedCharPref(getPrefReaderForType(feedType), "client");
             break;
           case "defaultHandlerMenuItem":
             prefs.setComplexValue(getPrefAppForType(feedType), Ci.nsILocalFile, 
                                   this._defaultSystemReader);
-            prefs.setCharPref(getPrefReaderForType(feedType), "client");
+            this.setFeedCharPref(getPrefReaderForType(feedType), "client");
             break;
           case "liveBookmarksMenuItem":
             defaultHandler = "bookmarks";
-            prefs.setCharPref(getPrefReaderForType(feedType), "bookmarks");
+            this.setFeedCharPref(getPrefReaderForType(feedType), "bookmarks");
             break;
         }
         var feedService = Cc["@mozilla.org/browser/feeds/result-service;1"].
@@ -1225,15 +1199,15 @@ FeedWriter.prototype = {
       // or to "bookmarks" (if the live bookmarks option is selected).
       // Otherwise, we should set it to "ask"
       if (useAsDefault) {
-        prefs.setCharPref(getPrefActionForType(feedType), defaultHandler);
+        this.setFeedCharPref(getPrefActionForType(feedType), defaultHandler);
       } else {
-        prefs.setCharPref(getPrefActionForType(feedType), "ask");
+        this.setFeedCharPref(getPrefActionForType(feedType), "ask");
       }
     }.bind(this);
 
     // Show the file picker before subscribing if the
     // choose application menuitem was chosen using the keyboard
-    if (selectedItem.getAttribute("anonid") == "chooseApplicationMenuItem") {
+    if (selectedItem.id == "chooseApplicationMenuItem") {
       this._chooseClientApp(function(aResult) {
         if (aResult) {
           selectedItem =

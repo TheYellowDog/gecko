@@ -420,12 +420,10 @@ FeedResultService.prototype = {
       LOG("unexpected handler: " + handler);
       // fall through
     case "bookmarks":
-      var wm = 
-          Cc["@mozilla.org/appshell/window-mediator;1"].
-          getService(Ci.nsIWindowMediator);
-      var topWindow = wm.getMostRecentWindow("navigator:browser");
-      topWindow.PlacesCommandHook.addLiveBookmark(spec, title, subtitle)
-                                 .catch(Components.utils.reportError);
+      Services.cpmm.sendAsyncMessage("FeedConverter:addLiveBookmark",
+                                     { spec: spec,
+                                       title: title,
+                                       subtitle: subtitle });
       break;
     }
   },

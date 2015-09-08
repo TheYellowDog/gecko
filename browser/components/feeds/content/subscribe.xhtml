@@ -27,10 +27,6 @@
           href="chrome://browser/skin/feeds/subscribe.css"
           type="text/css"
           media="all"/>
-    <link rel="stylesheet"
-          href="chrome://browser/content/feeds/subscribe.css"
-          type="text/css"
-          media="all"/>
     <script type="application/javascript"
             src="chrome://browser/content/feeds/subscribe.js"/>
   </head>
@@ -41,7 +37,15 @@
           <p id="feedSubscriptionInfo1" />
           <p id="feedSubscriptionInfo2" />
         </div>
-        <div id="feedSubscribeLine"></div>
+        <div id="feedSubscribeLine">
+          <span id="subscribeUsingDescription"></span>
+          <select id="handlersMenuList">
+            <option id="liveBookmarksMenuItem" selected="true">&feedLiveBookmarks;</option>
+          </select>
+          <br />
+          <input type="checkbox" id="alwaysUse" class="alwaysUse" checked="false"/><span id="checkboxText"></span>
+          <button id="subscribeButton">&feedSubscribeNow;</button>
+        </div>
       </div>
     </div>
 

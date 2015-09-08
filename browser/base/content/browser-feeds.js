@@ -169,6 +169,10 @@ var FeedHandler = {
     }
   },
 
+  setFeedCharPref: function(aPrefName, aPrefValue) {
+    Services.prefs.setCharPref(aPrefName, aPrefValue);
+  },
+
   init() {
     window.messageManager.addMessageListener("FeedWriter:ShownFirstRun", this);
   },
@@ -177,6 +181,9 @@ var FeedHandler = {
     switch (msg.name) {
       case "FeedWriter:ShownFirstRun":
         Services.prefs.setBoolPref("browser.feeds.showFirstRunUI", false);
+        break;
+      case "FeedWriter:SetFeedCharPref":
+        setFeedCharPref(message.data.pref, message.data.value);
         break;
     }
   },

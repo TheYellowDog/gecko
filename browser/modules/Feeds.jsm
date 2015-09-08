@@ -18,6 +18,10 @@ this.Feeds = {
   init() {
     let mm = Cc["@mozilla.org/globalmessagemanager;1"].getService(Ci.nsIMessageListenerManager);
     mm.addMessageListener("WCCR:registerProtocolHandler", this);
+
+    let ppmm = Cc["@mozilla.org/parentprocessmessagemanager;1"].getService(Ci.nsIMessageListenerManager);
+    ppmm.addMessageListener("WCCR:setAutoHandler", this);
+    ppmm.addMessageListener("FeedConverter:addLiveBookmark", this);
   },
 
   receiveMessage(aMessage) {
@@ -37,6 +41,25 @@ this.Feeds = {
                           getService(Ci.nsIWebContentHandlerRegistrar);
         registrar.registerContentHandler(data.contentType, data.uri, data.title,
                                          aMessage.target);
+        break;
+      }
+
+      case "WCCR:setAutoHandler": {
+        let data = aMessage.data;
+        let registrar = Cc["@mozilla.org/embeddor.implemented/web-content-handler-registrar;1"].
+                          getService(Ci.nsIWebContentHandlerRegistrar);
+        registrar.setAutoHandler(data.contentType, data.handler);
+        break;
+      }
+
+      case "FeedConverter:addLiveBookmark": {
+        let data = aMessage.data;
+        var wm =
+            Cc["@mozilla.org/appshell/window-mediator;1"].
+            getService(Ci.nsIWindowMediator);
+        var topWindow = wm.getMostRecentWindow("navigator:browser");
+        topWindow.PlacesCommandHook.addLiveBookmark(data.spec, data.title, data.subtitle)
+                                   .catch(Components.utils.reportError);
         break;
       }
     }
