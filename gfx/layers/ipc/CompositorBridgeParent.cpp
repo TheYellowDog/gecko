@@ -756,6 +756,15 @@ CompositorBridgeParent::~CompositorBridgeParent()
 {
   MOZ_ASSERT(NS_IsMainThread());
   MOZ_COUNT_DTOR(CompositorBridgeParent);
+
+  InfallibleTArray<PTextureParent*> textures;
+  ManagedPTextureParent(textures);
+  // We expect all textures to be destroyed by now.
+  MOZ_DIAGNOSTIC_ASSERT(textures.Length() == 0);
+  for (unsigned int i = 0; i < textures.Length(); ++i) {
+    RefPtr<TextureHost> tex = TextureHost::AsTextureHost(textures[i]);
+    tex->DeallocateDeviceData();
+  }
 }
 
 void
@@ -1895,7 +1904,9 @@ CompositorBridgeParent::RequestNotifyLayerTreeCleared(uint64_t aLayersId, Compos
  * hands off work to the CompositorBridgeParent it's associated with.
  */
 class CrossProcessCompositorBridgeParent final : public PCompositorBridgeParent,
-                                                 public ShadowLayersManager
+                                                 public ShadowLayersManager,
+                                                 public ISurfaceAllocator,
+                                                 public ShmemAllocator
 {
   friend class CompositorBridgeParent;
 
@@ -2029,6 +2040,27 @@ public:
   void DidComposite(uint64_t aId,
                     TimeStamp& aCompositeStart,
                     TimeStamp& aCompositeEnd);
+
+  virtual PTextureParent* AllocPTextureParent(const SurfaceDescriptor& aSharedData,
+                                              const LayersBackend& aLayersBackend,
+                                              const TextureFlags& aFlags,
+                                              const uint64_t& aId) override;
+
+  virtual bool DeallocPTextureParent(PTextureParent* actor) override;
+
+  virtual bool IsSameProcess() const override;
+
+  virtual ShmemAllocator* AsShmemAllocator() override { return this; }
+
+  virtual bool AllocShmem(size_t aSize,
+                          mozilla::ipc::SharedMemory::SharedMemoryType aType,
+                          mozilla::ipc::Shmem* aShmem) override;
+
+  virtual bool AllocUnsafeShmem(size_t aSize,
+                                mozilla::ipc::SharedMemory::SharedMemoryType aType,
+                                mozilla::ipc::Shmem* aShmem) override;
+
+  virtual void DeallocShmem(mozilla::ipc::Shmem& aShmem) override;
 
 protected:
   void OnChannelConnected(int32_t pid) override { mCompositorThreadHolder = sCompositorThreadHolder; }
@@ -2240,6 +2272,49 @@ CompositorBridgeParent::GetIndirectShadowTree(uint64_t aId)
     return nullptr;
   }
   return &cit->second;
+}
+
+PTextureParent*
+CompositorBridgeParent::AllocPTextureParent(const SurfaceDescriptor& aSharedData,
+                                            const LayersBackend& aLayersBackend,
+                                            const TextureFlags& aFlags,
+                                            const uint64_t& aId)
+{
+  return TextureHost::CreateIPDLActor(this, aSharedData, aLayersBackend, aFlags);
+}
+
+bool
+CompositorBridgeParent::DeallocPTextureParent(PTextureParent* actor)
+{
+  return TextureHost::DestroyIPDLActor(actor);
+}
+
+bool
+CompositorBridgeParent::AllocShmem(size_t aSize,
+                                   ipc::SharedMemory::SharedMemoryType aType,
+                                   ipc::Shmem* aShmem)
+{
+  return PCompositorBridgeParent::AllocShmem(aSize, aType, aShmem);
+}
+
+bool
+CompositorBridgeParent::AllocUnsafeShmem(size_t aSize,
+                                         ipc::SharedMemory::SharedMemoryType aType,
+                                         ipc::Shmem* aShmem)
+{
+  return PCompositorBridgeParent::AllocUnsafeShmem(aSize, aType, aShmem);
+}
+
+void
+CompositorBridgeParent::DeallocShmem(ipc::Shmem& aShmem)
+{
+  PCompositorBridgeParent::DeallocShmem(aShmem);
+}
+
+bool
+CompositorBridgeParent::IsSameProcess() const
+{
+  return OtherPid() == base::GetCurrentProcId();
 }
 
 bool
@@ -2764,6 +2839,69 @@ CrossProcessCompositorBridgeParent::CloneToplevel(
     }
   }
   return nullptr;
+}
+
+PTextureParent*
+CrossProcessCompositorBridgeParent::AllocPTextureParent(const SurfaceDescriptor& aSharedData,
+                                                        const LayersBackend& aLayersBackend,
+                                                        const TextureFlags& aFlags,
+                                                        const uint64_t& aId)
+{
+  CompositorBridgeParent::LayerTreeState* state = nullptr;
+
+  LayerTreeMap::iterator itr = sIndirectLayerTrees.find(aId);
+  if (sIndirectLayerTrees.end() != itr) {
+    state = &itr->second;
+  }
+
+  TextureFlags flags = aFlags;
+
+  if (state && state->mPendingCompositorUpdates) {
+    // The compositor was recreated, and we're receiving layers updates for a
+    // a layer manager that will soon be discarded or invalidated. We can't
+    // return null because this will mess up deserialization later and we'll
+    // kill the content process. Instead, we signal that the underlying
+    // TextureHost should not attempt to access the compositor.
+    flags |= TextureFlags::INVALID_COMPOSITOR;
+  } else if (aLayersBackend != state->mLayerManager->GetCompositor()->GetBackendType()) {
+    gfxDevCrash(gfx::LogReason::PAllocTextureBackendMismatch) << "Texture backend is wrong";
+  }
+
+  return TextureHost::CreateIPDLActor(this, aSharedData, aLayersBackend, aFlags);
+}
+
+bool
+CrossProcessCompositorBridgeParent::DeallocPTextureParent(PTextureParent* actor)
+{
+  return TextureHost::DestroyIPDLActor(actor);
+}
+
+bool
+CrossProcessCompositorBridgeParent::AllocShmem(size_t aSize,
+                                               ipc::SharedMemory::SharedMemoryType aType,
+                                               ipc::Shmem* aShmem)
+{
+  return PCompositorBridgeParent::AllocShmem(aSize, aType, aShmem);
+}
+
+bool
+CrossProcessCompositorBridgeParent::AllocUnsafeShmem(size_t aSize,
+                                                     ipc::SharedMemory::SharedMemoryType aType,
+                                                     ipc::Shmem* aShmem)
+{
+  return PCompositorBridgeParent::AllocUnsafeShmem(aSize, aType, aShmem);
+}
+
+void
+CrossProcessCompositorBridgeParent::DeallocShmem(ipc::Shmem& aShmem)
+{
+  PCompositorBridgeParent::DeallocShmem(aShmem);
+}
+
+bool
+CrossProcessCompositorBridgeParent::IsSameProcess() const
+{
+  return OtherPid() == base::GetCurrentProcId();
 }
 
 } // namespace layers
