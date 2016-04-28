@@ -144,8 +144,22 @@ GeckoChildProcessHost::~GeckoChildProcessHost()
 
 //static
 void
-GeckoChildProcessHost::GetPathToBinary(FilePath& exePath)
+GeckoChildProcessHost::GetPathToBinary(FilePath& exePath, GeckoProcessType processType)
 {
+#ifndef MOZ_WIDGET_ANDROID
+  if (processType != GeckoProcessType_Plugin &&
+      processType != GeckoProcessType_GMPlugin) {
+#if defined(OS_WIN)
+    exePath = FilePath(WideToUTF8(CommandLine::ForCurrentProcess()->program()));
+#elif defined(OS_POSIX)
+    exePath = FilePath(CommandLine::ForCurrentProcess()->argv()[0]);
+#else
+#  error Sorry
+#endif
+    return;
+  }
+#endif
+
   if (ShouldHaveDirectoryService()) {
     MOZ_ASSERT(gGREBinPath);
 #ifdef OS_WIN
@@ -154,6 +168,7 @@ GeckoChildProcessHost::GetPathToBinary(FilePath& exePath)
     nsCOMPtr<nsIFile> childProcPath;
     NS_NewLocalFile(nsDependentString(gGREBinPath), false,
                     getter_AddRefs(childProcPath));
+
     // We need to use an App Bundle on OS X so that we can hide
     // the dock icon. See Bug 557225.
     childProcPath->AppendNative(NS_LITERAL_CSTRING("plugin-container.app"));
@@ -264,7 +279,7 @@ uint32_t GeckoChildProcessHost::GetSupportedArchitecturesForProcessType(GeckoPro
     static uint32_t pluginContainerArchs = 0;
     if (pluginContainerArchs == 0) {
       FilePath exePath;
-      GetPathToBinary(exePath);
+      GetPathToBinary(exePath, type);
       nsresult rv = GetArchitecturesForBinary(exePath.value().c_str(), &pluginContainerArchs);
       NS_ASSERTION(NS_SUCCEEDED(rv) && pluginContainerArchs != 0, "Getting architecture of plugin container failed!");
       if (NS_FAILED(rv) || pluginContainerArchs == 0) {
@@ -779,7 +794,7 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 #endif  // OS_LINUX || OS_MACOSX
 
   FilePath exePath;
-  GetPathToBinary(exePath);
+  GetPathToBinary(exePath, mProcessType);
 
 #ifdef MOZ_WIDGET_ANDROID
   // The java wrapper unpacks this for us but can't make it executable
@@ -821,6 +836,11 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
   std::vector<std::string> childArgv;
 
   childArgv.push_back(exePath.value());
+
+  if (mProcessType != GeckoProcessType_Plugin &&
+      mProcessType != GeckoProcessType_GMPlugin) {
+    childArgv.push_back("-contentproc");
+  }
 
   childArgv.insert(childArgv.end(), aExtraOpts.begin(), aExtraOpts.end());
 
@@ -958,9 +978,15 @@ GeckoChildProcessHost::PerformAsyncLaunchInternal(std::vector<std::string>& aExt
 #elif defined(OS_WIN)
 
   FilePath exePath;
-  GetPathToBinary(exePath);
+  GetPathToBinary(exePath, mProcessType);
 
   CommandLine cmdLine(exePath.ToWStringHack());
+
+  if (mProcessType != GeckoProcessType_Plugin &&
+      mProcessType != GeckoProcessType_GMPlugin) {
+    cmdLine.AppendLooseValue(UTF8ToWide("-contentproc"));
+  }
+
   cmdLine.AppendSwitchWithValue(switches::kProcessChannelID, channel_id());
 
   for (std::vector<std::string>::iterator it = aExtraOpts.begin();
