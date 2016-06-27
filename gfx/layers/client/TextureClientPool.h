@@ -48,7 +48,7 @@ public:
                     gfx::SurfaceFormat aFormat,
                     gfx::IntSize aSize,
                     TextureFlags aFlags,
-                    uint32_t aMaxTextureClients,
+                    uint32_t aInitialUnusedTextureClients,
                     uint32_t aShrinkTimeoutMsec,
                     TextureForwarder* aAllocator);
 
@@ -76,22 +76,16 @@ public:
   void ReturnTextureClientDeferred(TextureClient *aClient) override;
 
   /**
-   * Attempt to shrink the pool so that there are no more than
-   * mMaxTextureClients clients outstanding.
-   */
-  void ShrinkToMaximumSize();
-
-  /**
-   * Attempt to shrink the pool so that there are no more than sMinCacheSize
-   * unused clients.
-   */
-  void ShrinkToMinimumSize();
-
-  /**
    * Return any clients to the pool that were previously returned in
    * ReturnTextureClientDeferred.
    */
   void ReturnDeferredClients();
+
+  /**
+   * Attempt to shrink the pool so that there are no more than
+   * mInitialUnusedTextureClients outstanding.
+   */
+  void ShrinkToMaximumSize();
 
   /**
    * Report that a client retrieved via GetTextureClient() has become
@@ -117,9 +111,11 @@ public:
 private:
   void ReturnUnlockedClients();
 
-  // The minimum size of the pool (the number of tiles that will be kept after
-  // shrinking).
-  static const uint32_t sMinCacheSize = 0;
+  /// We maintain a number of unused texture clients for immediate return from
+  /// GetTextureClient(). This will normally be called if there are no
+  /// TextureClients available in the pool, which ideally should only ever
+  /// be at startup.
+  void AllocateTextureClients(size_t aSize);
 
   /// Backend passed to the TextureClient for buffer creation.
   LayersBackend mBackend;
@@ -135,7 +131,7 @@ private:
 
   // The maximum number of texture clients managed by this pool that we want
   // to remain active.
-  uint32_t mMaxTextureClients;
+  uint32_t mInitialUnusedTextureClients;
 
   // The time in milliseconds before the pool will be shrunk to the minimum
   // size after returning a client.
