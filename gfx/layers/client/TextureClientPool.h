@@ -63,6 +63,10 @@ public:
    */
   already_AddRefed<TextureClient> GetTextureClient() override;
 
+  uint32_t OutstandingTilesCount() const { return mOutstandingClients; }
+  uint32_t AvailableTilesCount() const { return mTextureClients.size(); }
+  uint32_t DeferredTilesCount() const { return mTextureClientsDeferred.size(); }
+
   /**
    * Return a TextureClient that is no longer being used and is ready for
    * immediate re-use or destruction.

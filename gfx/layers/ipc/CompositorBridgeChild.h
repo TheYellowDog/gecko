@@ -181,6 +181,16 @@ public:
 
   void HandleMemoryPressure();
 
+  /**
+   * We do not keep the up to date statistics on the number of tiles
+   * in use, etc., so we add them up when this is called. These are the
+   * texture clients current in the texture pool(s). You can also see how
+   * many texture clients currently exist using TextureClients::TotalAllocated()
+   */
+  void UpdatePoolsStatistics(uint32_t& aOutstanding,
+                             uint32_t& aAvailable,
+                             uint32_t& aDeferred);
+
   virtual MessageLoop* GetMessageLoop() const override { return mMessageLoop; }
 
   virtual base::ProcessId GetParentPid() const override { return OtherPid(); }

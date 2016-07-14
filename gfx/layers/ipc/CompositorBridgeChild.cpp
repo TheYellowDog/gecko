@@ -922,6 +922,21 @@ CompositorBridgeChild::ClearTexturePool()
   }
 }
 
+void
+CompositorBridgeChild::UpdatePoolsStatistics(uint32_t& aOutstanding,
+                                             uint32_t& aAvailable,
+                                             uint32_t& aDeferred)
+{
+  aOutstanding = 0;
+  aAvailable = 0;
+  aDeferred = 0;
+  for (size_t i = 0; i < mTexturePools.Length(); i++) {
+    aOutstanding += mTexturePools[i]->OutstandingTilesCount();
+    aAvailable += mTexturePools[i]->AvailableTilesCount();
+    aDeferred += mTexturePools[i]->DeferredTilesCount();
+  }
+}
+
 PTextureChild*
 CompositorBridgeChild::CreateTexture(const SurfaceDescriptor& aSharedData,
                                      LayersBackend aLayersBackend,

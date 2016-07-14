@@ -69,6 +69,8 @@ using namespace mozilla::ipc;
 using namespace mozilla::gl;
 using namespace mozilla::gfx;
 
+Atomic<int> TextureClient::sTotalAllocated(0);
+
 struct TextureDeallocParams
 {
   TextureData* data;
@@ -547,11 +549,11 @@ TextureClient::SerializeReadLock(ReadLockDescriptor& aDescriptor)
     aDescriptor = null_t();
   }
 }
-
 TextureClient::~TextureClient()
 {
   mReadLock = nullptr;
   Destroy(false);
+  sTotalAllocated -= 1;
 }
 
 void
@@ -1213,6 +1215,7 @@ TextureClient::TextureClient(TextureData* aData, TextureFlags aFlags, ClientIPCA
 {
   mData->FillInfo(mInfo);
   mFlags |= mData->GetTextureFlags();
+  sTotalAllocated += 1;
 }
 
 bool TextureClient::CopyToTextureClient(TextureClient* aTarget,

@@ -689,6 +689,11 @@ public:
 
   void SerializeReadLock(ReadLockDescriptor& aDescriptor);
 
+  /**
+   * Total number of allocated clients, in case that info is useful.
+   */
+  static int TotalAllocated() { return sTotalAllocated; }
+
 private:
   static void TextureClientRecycleCallback(TextureClient* aClient, void* aClosure);
 
@@ -769,6 +774,9 @@ public:
   // Pointer to the pool this tile came from.
   TextureClientPool* mPoolTracker;
 #endif
+
+  // Just track constructors and destructors.
+  static Atomic<int> sTotalAllocated;
 };
 
 /**
