@@ -15,6 +15,7 @@
 #include "mozilla/MathAlgorithms.h"
 #include "mozilla/StaticPtr.h"
 #include "mozilla/widget/CompositorWidget.h"
+#include "mozilla/widget/X11CompositorWidget.h"
 
 #include "prenv.h"
 #include "GLContextProvider.h"
@@ -1090,13 +1091,7 @@ GLContextProviderGLX::CreateWrappingExisting(void* aContext, void* aSurface)
 }
 
 already_AddRefed<GLContext>
-GLContextProviderGLX::CreateForCompositorWidget(CompositorWidget* aCompositorWidget, bool aForceAccelerated)
-{
-    return CreateForWindow(aCompositorWidget->RealWidget(), aForceAccelerated);
-}
-
-already_AddRefed<GLContext>
-GLContextProviderGLX::CreateForWindow(nsIWidget* aWidget, bool aForceAccelerated)
+CreateForWidget(Display* aXDisplay, Window aXWindow, bool aForceAccelerated)
 {
     if (!sGLXLibrary.EnsureInitialized()) {
         return nullptr;
@@ -1109,19 +1104,17 @@ GLContextProviderGLX::CreateForWindow(nsIWidget* aWidget, bool aForceAccelerated
     // performance might be suboptimal.  But using the existing visual
     // is a relatively safe intermediate step.
 
-    Display* display = (Display*)aWidget->GetNativeData(NS_NATIVE_COMPOSITOR_DISPLAY);
-    if (!display) {
+    if (!aXDisplay) {
         NS_ERROR("X Display required for GLX Context provider");
         return nullptr;
     }
 
-    int xscreen = DefaultScreen(display);
-    Window window = GET_NATIVE_WINDOW(aWidget);
+    int xscreen = DefaultScreen(aXDisplay);
 
     ScopedXFree<GLXFBConfig> cfgs;
     GLXFBConfig config;
     int visid;
-    if (!GLContextGLX::FindFBConfigForWindow(display, xscreen, window, &cfgs,
+    if (!GLContextGLX::FindFBConfigForWindow(aXDisplay, xscreen, aXWindow, &cfgs,
                                              &config, &visid))
     {
         return nullptr;
@@ -1131,9 +1124,31 @@ GLContextProviderGLX::CreateForWindow(nsIWidget* aWidget, bool aForceAccelerated
     GLContextGLX* shareContext = GetGlobalContextGLX();
     RefPtr<GLContextGLX> gl = GLContextGLX::CreateGLContext(CreateContextFlags::NONE,
                                                             caps, shareContext, false,
-                                                            display, window, config,
+                                                            aXDisplay, aXWindow, config,
                                                             false);
     return gl.forget();
+}
+
+already_AddRefed<GLContext>
+GLContextProviderGLX::CreateForCompositorWidget(CompositorWidget* aCompositorWidget, bool aForceAccelerated)
+{
+    X11CompositorWidget* compWidget = aCompositorWidget->AsX();
+    MOZ_ASSERT(compWidget);
+
+    return CreateForWidget(compWidget->XDisplay(),
+                           compWidget->XWindow(),
+                           aForceAccelerated);
+}
+
+already_AddRefed<GLContext>
+GLContextProviderGLX::CreateForWindow(nsIWidget* aWidget, bool aForceAccelerated)
+{
+    Display* display = (Display*)aWidget->GetNativeData(NS_NATIVE_COMPOSITOR_DISPLAY);
+    Window window = GET_NATIVE_WINDOW(aWidget);
+
+    return CreateForWidget(display,
+                           window,
+                           aForceAccelerated);
 }
 
 static bool
