@@ -25,6 +25,7 @@
 #endif /* MOZ_X11 */
 
 #include "mozilla/widget/WindowSurface.h"
+#include "mozilla/widget/WindowSurfaceProvider.h"
 
 #ifdef ACCESSIBILITY
 #include "mozilla/a11y/Accessible.h"
@@ -349,6 +350,8 @@ public:
                                                 nsIObserver* aObserver) override;
 #endif
 
+    virtual void GetCompositorWidgetInitData(mozilla::widget::CompositorWidgetInitData* aInitData) override;
+
     // HiDPI scale conversion
     gint GdkScaleFactor();
 
@@ -454,13 +457,12 @@ private:
     nsRefPtrHashtable<nsPtrHashKey<GdkEventSequence>, mozilla::dom::Touch> mTouches;
 #endif
 
-    mozilla::UniquePtr<mozilla::widget::WindowSurface> mWindowSurface;
-
 #ifdef MOZ_X11
     Display*            mXDisplay;
     Window              mXWindow;
     Visual*             mXVisual;
     int                 mXDepth;
+    mozilla::widget::WindowSurfaceProvider mSurfaceProvider;
 #endif
 
     // Upper bound on pending ConfigureNotify events to be dispatched to the
@@ -550,8 +552,6 @@ private:
     void CleanLayerManagerRecursive();
 
     virtual int32_t RoundsWidgetCoordinatesTo() override;
-
-    mozilla::UniquePtr<mozilla::widget::WindowSurface> CreateWindowSurface();
 
     /**
      * |mIMContext| takes all IME related stuff.
