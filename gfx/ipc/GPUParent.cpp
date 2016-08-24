@@ -14,6 +14,7 @@
 #include "mozilla/layers/CompositorBridgeParent.h"
 #include "mozilla/layers/CompositorThread.h"
 #include "mozilla/layers/ImageBridgeParent.h"
+#include "ProcessUtils.h"
 #include "VRManager.h"
 #include "VRManagerParent.h"
 #include "VsyncBridgeParent.h"
@@ -54,6 +55,7 @@ GPUParent::Init(base::ProcessId aParentPid,
   CompositorThreadHolder::Start();
   VRManager::ManagerInit();
   gfxPlatform::InitNullMetadata();
+  mozilla::ipc::SetThisProcessName("GPU Process");
   return true;
 }
 
