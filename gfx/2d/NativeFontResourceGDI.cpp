@@ -50,7 +50,8 @@ NativeFontResourceGDI::Create(uint8_t *aFontData, uint32_t aDataLength,
 
   if (numberOfFontsAdded != fontNames.length()) {
     gfxWarning() <<
-      "Number of fonts added doesn't match number of names extracted.";
+      "Number of fonts added doesn't match number of names extracted. Added: "
+      << numberOfFontsAdded << " extracted: " << fontNames.length();
   }
 
   RefPtr<NativeFontResourceGDI> fontResouce =
