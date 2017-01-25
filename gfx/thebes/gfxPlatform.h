@@ -283,10 +283,25 @@ public:
     static bool AsyncPanZoomEnabled();
 
     virtual void GetAzureBackendInfo(mozilla::widget::InfoObject &aObj) {
-      aObj.DefineProperty("AzureCanvasBackend", GetBackendName(mPreferredCanvasBackend));
+      char* canvasBackendName = "AzureCanvasBackend";
+      char* fallbackCanvasBackendName = "AzureFallbackCanvasBackend";
+      char* contentBackendName = "AzureContentBackend";
+
+      if (gfxConfig::IsEnabled(Feature::GPU_PROCESS)) {
+        canvasBackendName = "AzureCanvasBackend (UI Process)";
+        contentBackendName = "AzureContentBackend (UI Process)";
+        fallbackCanvasBackendName = "AzureFallbackCanvasBackend (UI Process)";
+
+        if (gfxConfig::IsEnabled(gfx::Feature::DIRECT2D)) {
+            aObj.DefineProperty("AzureCanvasBackend", "Direct2D 1.1");
+            aObj.DefineProperty("AzureContentBackend", "Direct2D 1.1");
+        }
+      }
+        
+      aObj.DefineProperty(canvasBackendName, GetBackendName(mPreferredCanvasBackend));
       aObj.DefineProperty("AzureCanvasAccelerated", AllowOpenGLCanvas());
-      aObj.DefineProperty("AzureFallbackCanvasBackend", GetBackendName(mFallbackCanvasBackend));
-      aObj.DefineProperty("AzureContentBackend", GetBackendName(mContentBackend));
+      aObj.DefineProperty(fallbackCanvasBackendName, GetBackendName(mFallbackCanvasBackend));
+      aObj.DefineProperty(contentBackendName, GetBackendName(mContentBackend));
     }
     void GetApzSupportInfo(mozilla::widget::InfoObject& aObj);
     void GetTilesSupportInfo(mozilla::widget::InfoObject& aObj);
